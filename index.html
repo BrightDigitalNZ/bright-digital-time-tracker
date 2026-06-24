@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bright Digital - Time Tracker</title>
+<style>
+  :root{ --bg:#0f1115; --card:#1a1d24; --line:#2a2e38; --txt:#e7e9ee; --mut:#9aa0ac; --acc:#5b8cff; --accd:#3f6fe0; --ok:#3ec98a; --warn:#ffb454; --err:#ff6b6b; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt);}
+  header{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .who{font-size:13px;color:var(--mut)}
+  .wrap{max-width:880px;margin:0 auto;padding:20px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px;}
+  label{display:block;font-size:12px;color:var(--mut);margin:0 0 6px;text-transform:uppercase;letter-spacing:.4px}
+  input,select,textarea,button{font:inherit}
+  input,select,textarea{width:100%;padding:10px 12px;background:#12151c;border:1px solid var(--line);border-radius:9px;color:var(--txt);}
+  textarea{min-height:64px;resize:vertical}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media(max-width:640px){.row,.row3{grid-template-columns:1fr}}
+  .field{margin-bottom:14px}
+  button{cursor:pointer;border:0;border-radius:9px;padding:11px 16px;font-weight:600}
+  .btn{background:var(--acc);color:#fff}
+  .btn:hover{background:var(--accd)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  .note{font-size:12.5px;color:var(--warn);margin-top:6px}
+  .msg{padding:10px 12px;border-radius:9px;font-size:13.5px;margin-bottom:12px;display:none}
+  .msg.ok{background:rgba(62,201,138,.12);color:var(--ok);border:1px solid rgba(62,201,138,.3);display:block}
+  .msg.err{background:rgba(255,107,107,.12);color:var(--err);border:1px solid rgba(255,107,107,.3);display:block}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:99px;background:#222734;font-size:11.5px;color:var(--mut)}
+  .total{font-weight:700;color:var(--acc)}
+  .muted{color:var(--mut);font-size:13px}
+  .center{text-align:center}
+  .del{color:var(--err);background:transparent;border:0;cursor:pointer;font-size:13px;padding:2px 6px}
+  .hide{display:none!important}
+  .pin-wrap{max-width:360px;margin:60px auto;text-align:center}
+  .pin-wrap .card{padding:28px}
+  .linkbar{font-size:12.5px;margin-top:8px}
+  .linkbar a{color:var(--acc);text-decoration:none}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .stat{background:#12151c;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .stat .k{font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+  .stat .v{font-size:20px;font-weight:700;margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bright Digital · Time Tracker</h1>
+  <div class="who" id="whoami"></div>
+</header>
+
+<!-- LOGIN / PIN -->
+<div id="loginView" class="wrap">
+  <div class="pin-wrap">
+    <div class="card">
+      <div class="field">
+        <label>Who are you?</label>
+        <select id="loginName"></select>
+      </div>
+      <div class="field">
+        <label>PIN</label>
+        <input id="loginPin" type="password" inputmode="numeric" maxlength="8" placeholder="Enter your PIN" autocomplete="off">
+      </div>
+      <div class="msg" id="loginMsg"></div>
+      <button class="btn" id="loginBtn" style="width:100%">Sign in</button>
+      <div class="linkbar muted" style="margin-top:14px">First time? Pick your name, choose any PIN, and it will be set on first sign-in.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appView" class="wrap hide">
+
+  <div class="card">
+    <h2 style="margin:0 0 14px;font-size:15px">Log time</h2>
+    <div class="msg" id="entryMsg"></div>
+    <div class="row3">
+      <div class="field">
+        <label>Date</label>
+        <input id="fDate" type="date">
+      </div>
+      <div class="field">
+        <label>Client</label>
+        <select id="fClient"></select>
+      </div>
+      <div class="field">
+        <label>Hours</label>
+        <input id="fHours" type="number" step="0.25" min="0" placeholder="e.g. 1.5">
+      </div>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="fCategory"></select>
+    </div>
+    <div class="field">
+      <label>Note (optional)</label>
+      <textarea id="fNote" placeholder="What did you work on?"></textarea>
+    </div>
+    <div id="verveNote" class="note hide">Logging Verve hours? Use the Verve tracker instead — your Verve time is billed directly there.</div>
+    <button class="btn" id="addBtn">Add entry</button>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 style="margin:0;font-size:15px">Your recent entries</h2>
+      <select id="filterMine" style="width:auto">
+        <option value="mine">My entries</option>
+        <option value="all" id="allOpt">Everyone (admin)</option>
+      </select>
+    </div>
+    <div class="summary-grid" id="statRow"></div>
+    <div style="overflow-x:auto;margin-top:14px">
+      <table id="entriesTable">
+        <thead><tr><th>Date</th><th>Name</th><th>Client</th><th>Category</th><th>Hours</th><th>Note</th><th></th></tr></thead>
+        <tbody id="entriesBody"></tbody>
+      </table>
+    </div>
+    <div class="muted center" id="emptyState" style="padding:20px">No entries yet.</div>
+  </div>
+
+  <div class="card" id="adminCard" style="display:none">
+    <h2 style="margin:0 0 12px;font-size:15px">Admin · add a category</h2>
+    <div class="row">
+      <div class="field"><input id="newCat" placeholder="New category name"></div>
+      <div class="field"><button class="btn-ghost" id="addCatBtn">Add category</button></div>
+    </div>
+  </div>
+
+  <div class="center"><button class="btn-ghost" id="logoutBtn">Sign out</button></div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyk9jI3D-vsRBbzbBN1sjhjccFoCBe3QTrWGiNBwlqyA2gXMC1N34XRJqCveigMg5R7sQ/exec";
+const API_TOKEN = "a58d175243929a8803f0a166d6b8055b9558b8e4613556d7";
+
+// ---- Config (team / clients / categories) ----
+const TEAM = ["Tineke","Maddie","Tom","Amber","Kurt"];
+const ADMINS = ["Tineke"];
+// Maddie & Tom bill Verve directly via the Verve tracker, so hide Verve for them.
+const NO_VERVE = ["Maddie","Tom"];
+const CLIENTS = ["ACT","Armstrong's","Armstrong's Finance","HC&W","UMC","Verve"];
+const DEFAULT_CATEGORIES = ["SEO","Paid Media","Reporting & Analysis","Content","Strategy & Planning","Meetings","Admin","Website Updates"];
+
+let STATE = { user:null, entries:[], categories:[], users:[] };
+
+// ---- API helpers ----
+async function apiGet(){
+  const r = await fetch(API_URL + "?token=" + encodeURIComponent(API_TOKEN));
+  return r.json();
+}
+async function apiPost(action, payload){
+  const body = Object.assign({ token: API_TOKEN, action }, payload||{});
+  const r = await fetch(API_URL, {
+    method:"POST",
+    headers:{ "Content-Type":"text/plain;charset=utf-8" },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function show(el,msg,type){ el.textContent=msg; el.className="msg "+(type||"ok"); }
+function hideMsg(el){ el.className="msg"; }
+
+// ---- Login ----
+function populateLogin(){
+  const sel = document.getElementById("loginName");
+  sel.innerHTML = TEAM.map(n=>'<option value="'+n+'">'+n+'</option>').join("");
+}
+async function doLogin(){
+  const name = document.getElementById("loginName").value;
+  const pin = document.getElementById("loginPin").value.trim();
+  const msg = document.getElementById("loginMsg");
+  if(!pin){ show(msg,"Please enter a PIN.","err"); return; }
+  document.getElementById("loginBtn").disabled = true;
+  try{
+    const pin_hash = await sha256(pin);
+    const data = await apiGet();
+    if(!data.ok){ show(msg,"Could not reach the server.","err"); return; }
+    STATE.users = data.users||[];
+    STATE.categories = (data.categories||[]).map(c=>c.name);
+    STATE.entries = data.entries||[];
+    const existing = STATE.users.find(u=>u.name===name);
+    if(!existing){
+      const res = await apiPost("createUser",{ name, pin_hash });
+      if(!res.ok){ show(msg,res.error||"Could not create user.","err"); return; }
+    } else {
+      const res = await apiPost("verifyPin",{ name, pin_hash });
+      if(!res.ok || !res.valid){ show(msg,"Incorrect PIN.","err"); return; }
+    }
+    STATE.user = name;
+    sessionStorage.setItem("bd_user", name);
+    enterApp();
+  }catch(e){
+    show(msg,"Error: "+e.message,"err");
+  }finally{
+    document.getElementById("loginBtn").disabled = false;
+  }
+}
+
+// ---- App ----
+function isAdmin(){ return ADMINS.includes(STATE.user); }
+function clientsFor(user){
+  let list = CLIENTS.slice();
+  if(NO_VERVE.includes(user)) list = list.filter(c=>c!=="Verve");
+  return list;
+}
+function enterApp(){
+  document.getElementById("loginView").classList.add("hide");
+  document.getElementById("appView").classList.remove("hide");
+  document.getElementById("whoami").textContent = "Signed in as " + STATE.user + (isAdmin()?" · Admin":"");
+  document.getElementById("fDate").value = new Date().toISOString().slice(0,10);
+
+  const fc = document.getElementById("fClient");
+  fc.innerHTML = clientsFor(STATE.user).map(c=>'<option>'+c+'</option>').join("");
+
+  if(NO_VERVE.includes(STATE.user)) document.getElementById("verveNote").classList.remove("hide");
+
+  const cats = STATE.categories.length ? STATE.categories : DEFAULT_CATEGORIES;
+  document.getElementById("fCategory").innerHTML = cats.map(c=>'<option>'+c+'</option>').join("");
+
+  if(isAdmin()){
+    document.getElementById("adminCard").style.display="block";
+    document.getElementById("allOpt").style.display="block";
+  } else {
+    document.getElementById("allOpt").style.display="none";
+    document.getElementById("filterMine").value="mine";
+  }
+  renderEntries();
+}
+
+function renderEntries(){
+  const mode = document.getElementById("filterMine").value;
+  let rows = STATE.entries.slice();
+  if(mode==="mine" || !isAdmin()) rows = rows.filter(e=>e.name===STATE.user);
+  rows.sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||"").localeCompare(a.createdAt||""));
+
+  const body = document.getElementById("entriesBody");
+  const empty = document.getElementById("emptyState");
+  const table = document.getElementById("entriesTable");
+  if(!rows.length){ table.style.display="none"; empty.style.display="block"; }
+  else { table.style.display="table"; empty.style.display="none"; }
+
+  body.innerHTML = rows.map(e=>{
+    const canDel = (e.name===STATE.user) || isAdmin();
+    return '<tr>'+
+      '<td>'+(e.date||"")+'</td>'+
+      '<td>'+(e.name||"")+'</td>'+
+      '<td><span class="pill">'+(e.client||"")+'</span></td>'+
+      '<td>'+(e.category||"")+'</td>'+
+      '<td>'+(e.hours||"")+'</td>'+
+      '<td class="muted">'+((e.note||"").replace(/</g,"&lt;"))+'</td>'+
+      '<td>'+(canDel?'<button class="del" data-id="'+e.id+'">Delete</button>':'')+'</td>'+
+    '</tr>';
+  }).join("");
+
+  body.querySelectorAll(".del").forEach(b=>b.onclick=()=>deleteEntry(b.dataset.id));
+
+  // stats
+  const totalH = rows.reduce((s,e)=>s+(parseFloat(e.hours)||0),0);
+  const byClient = {};
+  rows.forEach(e=>{ byClient[e.client]=(byClient[e.client]||0)+(parseFloat(e.hours)||0); });
+  let stats = '<div class="stat"><div class="k">Total hours</div><div class="v">'+totalH.toFixed(2)+'</div></div>';
+  Object.keys(byClient).sort((a,b)=>byClient[b]-byClient[a]).slice(0,5).forEach(c=>{
+    stats += '<div class="stat"><div class="k">'+c+'</div><div class="v">'+byClient[c].toFixed(2)+'</div></div>';
+  });
+  document.getElementById("statRow").innerHTML = stats;
+}
+
+async function addEntry(){
+  const msg = document.getElementById("entryMsg");
+  const date = document.getElementById("fDate").value;
+  const client = document.getElementById("fClient").value;
+  const category = document.getElementById("fCategory").value;
+  const hours = document.getElementById("fHours").value;
+  const note = document.getElementById("fNote").value.trim();
+  if(!date || !client || !category || !hours){ show(msg,"Please fill date, client, category and hours.","err"); return; }
+  document.getElementById("addBtn").disabled = true;
+  try{
+    const res = await apiPost("addEntry",{ name:STATE.user, date, client, category, hours, note });
+    if(!res.ok){ show(msg,res.error||"Could not save.","err"); return; }
+    STATE.entries.push(res.entry || { id:res.id, name:STATE.user, date, client, category, hours, note, createdAt:new Date().toISOString() });
+    show(msg,"Entry added.","ok");
+    document.getElementById("fHours").value="";
+    document.getElementById("fNote").value="";
+    renderEntries();
+  }catch(e){ show(msg,"Error: "+e.message,"err"); }
+  finally{ document.getElementById("addBtn").disabled=false; }
+}
+
+async function deleteEntry(id){
+  if(!confirm("Delete this entry?")) return;
+  const res = await apiPost("deleteEntry",{ id, name:STATE.user });
+  if(res.ok){ STATE.entries = STATE.entries.filter(e=>String(e.id)!==String(id)); renderEntries(); }
+  else alert(res.error||"Could not delete.");
+}
+
+async function addCategory(){
+  const v = document.getElementById("newCat").value.trim();
+  if(!v) return;
+  const res = await apiPost("addCategory",{ name:v });
+  if(res.ok){ STATE.categories.push(v); document.getElementById("newCat").value="";
+    document.getElementById("fCategory").innerHTML = (STATE.categories.length?STATE.categories:DEFAULT_CATEGORIES).map(c=>'<option>'+c+'</option>').join(""); alert("Category added."); }
+  else alert(res.error||"Could not add.");
+}
+
+function logout(){ sessionStorage.removeItem("bd_user"); location.reload(); }
+
+// ---- Wire up ----
+document.getElementById("loginBtn").onclick = doLogin;
+document.getElementById("loginPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+document.getElementById("addBtn").onclick = addEntry;
+document.getElementById("addCatBtn").onclick = addCategory;
+document.getElementById("logoutBtn").onclick = logout;
+document.getElementById("filterMine").onchange = renderEntries;
+
+populateLogin();
+
+// auto-resume session
+(async function(){
+  const saved = sessionStorage.getItem("bd_user");
+  if(saved && TEAM.includes(saved)){
+    try{
+      const data = await apiGet();
+      if(data.ok){
+        STATE.users=data.users||[]; STATE.categories=(data.categories||[]).map(c=>c.name); STATE.entries=data.entries||[]; STATE.user=saved;
+        enterApp();
+      }
+    }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
